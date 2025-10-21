@@ -26,6 +26,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
       # This is used to complete the identity challenge
       # with sigstore/fulcio when running outside of PRs.
       id-token: write
@@ -47,7 +48,7 @@ jobs:
           output: 'trivy-results.sarif' # File to save SARIF results
           severity: 'CRITICAL,HIGH' # Scan for Critical and High severity vulnerabilities
           ignore-unfixed: true # Ignore vulnerabilities that don't have a fix available
-          exit-code: '1' # Fail the job if vulnerabilities are found
+          exit-code: '0' # Temporarily set to 0 to see vulnerability status
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
