@@ -10,6 +10,7 @@ import (
 )
 
 // HealthResponse represents the health check response
+// test
 type HealthResponse struct {
 	Status    string    `json:"status"`
 	Timestamp time.Time `json:"timestamp"`
