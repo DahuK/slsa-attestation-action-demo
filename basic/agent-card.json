@@ -1,5 +1,5 @@
 {
-  "name": "qwen-basic",
+  "name": "basic",
   "description": "A basic agent powered by Qwen-plus model",
   "url": "localhost:8080",
   "version": "0.1.0",

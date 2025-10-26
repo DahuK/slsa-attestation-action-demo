@@ -2,8 +2,10 @@ import json
 import os
 import random
 import requests
-from typing import Dict, Any, List, Callable
-
+from typing import Dict, Any, List, Callable, AsyncGenerator
+from google.adk.agents import Agent
+from google.adk.models.base_llm import BaseLlm
+from google.adk.models.llm_response import LlmResponse
 
 def roll_die(sides: int) -> int:
     """Roll a die and return the rolled result.
@@ -38,89 +40,49 @@ def check_prime(nums: List[int]) -> str:
     return "No prime numbers found." if not primes else f"{', '.join(str(num) for num in primes)} are prime numbers."
 
 
-class QwenAgent:
-    def __init__(self, name: str, description: str, instruction: str, tools: List[Callable]):
-        self.name = name
-        self.description = description
-        self.instruction = instruction
-        self.tools = tools
-        self.api_key = os.getenv("DASHSCOPE_API_KEY")
-        self.api_url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2text/generate"
+# Custom Qwen LLM implementation
+class QwenLLM(BaseLlm):
+    def __init__(self, model: str = "qwen-plus"):
+        super().__init__(model=model)
+        # Store API config as private attributes
+        object.__setattr__(self, '_api_key', os.getenv("DASHSCOPE_API_KEY", ""))
+        object.__setattr__(self, '_api_url', "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2text/generate")
 
-    def _get_tools_schema(self) -> List[Dict[str, Any]]:
-        """Generate tools schema for Qwen API"""
-        tools_schema = []
-        for tool in self.tools:
-            # Get function signature and docstring
-            import inspect
-            sig = inspect.signature(tool)
-            doc = tool.__doc__ or ""
+    @property
+    def api_key(self) -> str:
+        return object.__getattribute__(self, '_api_key')
 
-            # Parse function name and description
-            func_name = tool.__name__
-            description = doc.split("Args:")[0].strip() if "Args:" in doc else doc.strip()
+    @property
+    def api_url(self) -> str:
+        return object.__getattribute__(self, '_api_url')
 
-            # Build parameters schema
-            parameters = {"type": "object", "properties": {}, "required": []}
-            for param_name, param in sig.parameters.items():
-                if param_name == "self":
-                    continue
-
-                param_schema = {"description": f"Parameter {param_name}"}
-
-                # Type mapping
-                if param.annotation != inspect.Parameter.empty:
-                    if param.annotation == int:
-                        param_schema["type"] = "integer"
-                    elif param.annotation == List[int]:
-                        param_schema["type"] = "array"
-                        param_schema["items"] = {"type": "integer"}
-                    elif param.annotation == str:
-                        param_schema["type"] = "string"
-                    else:
-                        param_schema["type"] = "string"
-
-                parameters["properties"][param_name] = param_schema
-                if param.default == inspect.Parameter.empty:
-                    parameters["required"].append(param_name)
-
-            tools_schema.append({
-                "type": "function",
-                "function": {
-                    "name": func_name,
-                    "description": description,
-                    "parameters": parameters
-                }
-            })
-
-        return tools_schema
-
-    def chat(self, message: str) -> str:
-        """Send message to Qwen API and get response"""
+    async def generate_content_async(self, request) -> AsyncGenerator[LlmResponse, None]:
+        """Generate content using Qwen API"""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
 
-        # Combine instruction with user message
-        full_instruction = f"{self.instruction}\n\nUser: {message}"
+        # Extract message from request contents
+        if hasattr(request, 'contents') and request.contents:
+            # Get the first content's text
+            content = request.contents[0]
+            if hasattr(content, 'parts') and content.parts:
+                message = content.parts[0]
+            else:
+                message = str(content)
+        else:
+            message = str(request)
 
         data = {
-            "model": "qwen-plus",
+            "model": self.model,
             "input": {
                 "messages": [
                     {
-                        "role": "system",
-                        "content": self.description
-                    },
-                    {
                         "role": "user",
-                        "content": full_instruction
+                        "content": message
                     }
                 ]
-            },
-            "parameters": {
-                "tools": self._get_tools_schema()
             }
         }
 
@@ -130,20 +92,43 @@ class QwenAgent:
 
             result = response.json()
             if "output" in result and "text" in result["output"]:
-                return result["output"]["text"]
+                text = result["output"]["text"]
+                # Create LlmResponse
+                llm_response = LlmResponse(
+                    text=text,
+                    usage={"input_tokens": 0, "output_tokens": 0}  # Simplified usage info
+                )
+                yield llm_response
             else:
-                return "I apologize, but I couldn't process your request properly."
+                # Error response
+                error_response = LlmResponse(
+                    text="I apologize, but I couldn't process your request properly.",
+                    usage={"input_tokens": 0, "output_tokens": 0}
+                )
+                yield error_response
 
         except requests.exceptions.RequestException as e:
-            return f"I encountered an error while processing your request: {str(e)}"
+            error_response = LlmResponse(
+                text=f"I encountered an error while processing your request: {str(e)}",
+                usage={"input_tokens": 0, "output_tokens": 0}
+            )
+            yield error_response
         except Exception as e:
-            return f"An unexpected error occurred: {str(e)}"
+            error_response = LlmResponse(
+                text=f"An unexpected error occurred: {str(e)}",
+                usage={"input_tokens": 0, "output_tokens": 0}
+            )
+            yield error_response
 
 
-# Create the agent instance
-root_agent = QwenAgent(
+# Create Qwen LLM instance
+qwen_llm = QwenLLM(model="qwen-plus")
+
+# Create the agent instance using Google ADK with Qwen backend
+root_agent = Agent(
     name="hello_world_agent",
     description="hello world agent that can roll a dice of 8 sides and check prime numbers.",
+    model=qwen_llm,  # Use custom Qwen LLM
     instruction="""
       You roll dice and answer questions about the outcome of the dice rolls.
       You can roll dice of different sizes.
