@@ -1,7 +1,3 @@
-# Documentation
-README.md
-*.md
-
 # Git
 .git
 .gitignore

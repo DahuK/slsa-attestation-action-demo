@@ -1,166 +1,102 @@
-# SLSA Demo Server
+# SLSA Attestation Action Demo
 
-🚀 A demo Go server demonstrating SLSA (Supply chain Levels for Software Artifacts) compliance with containerization.
-
-## Overview
-
-This project demonstrates how to build a secure, production-ready containerized Go application following SLSA best practices.
+🚀 A SLSA-compliant AI agent powered by Qwen-Plus with function calling capabilities.
 
 ## Features
 
-- ✅ **Health Check Endpoint** (`/health`) - Server status and uptime
-- ✅ **Info Endpoint** (`/info`) - Server information
-- ✅ **CORS Support** - Cross-origin resource sharing
-- ✅ **Structured Logging** - Request logging middleware
-- ✅ **Multi-stage Docker Build** - Optimized image size and security
-- ✅ **Non-root User** - Security best practice
-- ✅ **Health Checks** - Docker health check support
-
-## Tech Stack
-
-- **Language**: Go 1.21+
-- **Container**: Docker with multi-stage builds
-- **Security**: Non-root user, minimal base image
+- 🤖 **Qwen-Plus Integration** - Advanced AI model API integration
+- 🎲 **Dice Rolling** - Roll dice with any number of sides
+- 🔢 **Prime Checking** - Check if numbers are prime
+- 🔒 **SLSA Compliance** - Supply chain security best practices
+- 🐳 **Docker Support** - Containerized deployment
+- 🔍 **Security Scanning** - Automated vulnerability detection
 
 ## Quick Start
 
-### Local Development
+### Installation
 
 ```bash
-# Clone the repository
+# Clone repository
 git clone <repository-url>
 cd slsa-demo
 
-# Run the application
-go run main.go
+# Install dependencies
+uv sync
+
+# Set API key
+export DASHSCOPE_API_KEY="your-api-key"
 ```
 
-Access the application:
-- Homepage: http://localhost:8080
-- Health check: http://localhost:8080/health
-- Server info: http://localhost:8080/info
+### Usage
+
+```python
+from basic.agent import root_agent
+
+# Roll a 6-sided die
+response = root_agent.chat("Roll a 6-sided die")
+print(response)
+
+# Check prime numbers
+response = root_agent.chat("Check if 17, 23, 25 are prime")
+print(response)
+```
 
 ### Docker
 
 ```bash
-# Build the image
-docker build -t slsa-demo:latest .
+# Build image
+docker build -t qwen-agent .
 
-# Run the container
-docker run -p 8080:8080 slsa-demo:latest
-```
-
-## API Endpoints
-
-### GET /
-
-Returns an HTML page with service information and available endpoints.
-
-**Response**: HTML page
-
-### GET /health
-
-Returns server health status.
-
-**Response**: JSON
-```json
-{
-  "status": "healthy",
-  "timestamp": "2024-01-01T12:00:00Z",
-  "version": "1.0.0",
-  "uptime": "1h23m45s"
-}
-```
-
-### GET /info
-
-Returns server information.
-
-**Response**: JSON
-```json
-{
-  "name": "SLSA Demo Server",
-  "version": "1.0.0",
-  "description": "A demo Go server demonstrating SLSA compliance with containerization",
-  "environment": "production"
-}
+# Run container
+docker run -e DASHSCOPE_API_KEY="your-key" qwen-agent
 ```
 
 ## Configuration
 
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `PORT` | `8080` | Server port |
-| `ENVIRONMENT` | `development` | Runtime environment |
-| `APP_VERSION` | `1.0.0-dev` | Application version |
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DASHSCOPE_API_KEY` | Qwen API Key | Yes |
+| `QWEN_MODEL` | Model name (default: qwen-plus) | No |
+| `AGENT_TIMEOUT` | API timeout in seconds | No |
 
-## Docker Image
+## Tools
 
-- **Base Image**: `alpine:latest`
-- **Build Image**: `golang:1.21-alpine`
-- **User**: Non-root user (uid: 1001)
-- **Port**: 8080
-- **Health Check**: 30s interval
+### Dice Rolling
+- **Function**: `roll_die(sides: int)`
+- **Usage**: Roll dice with specified sides
 
-## Security Features
+### Prime Checking
+- **Function**: `check_prime(nums: List[int])`
+- **Usage**: Check which numbers are prime
 
-- 🔒 **Non-root User** - Prevents privilege escalation attacks
-- 🔒 **Minimal Base Image** - Reduces attack surface
-- 🔒 **Multi-stage Build** - Smaller production image
-- 🔒 **Static Linking** - Eliminates dynamic library vulnerabilities
+## Security
+
+- 🔒 **SLSA Level 2+** compliance
+- 🛡️ **Trivy** vulnerability scanning
+- 🔐 **Non-root** container execution
+- 📦 **Minimal dependencies** for security
 
 ## Development
 
-### Project Structure
-
-```
-slsa-demo/
-├── main.go          # Main application file
-├── go.mod          # Go module definition
-├── Dockerfile      # Docker build file
-├── .dockerignore   # Docker ignore file
-└── README.md       # This file
-```
-
-### Local Development
-
 ```bash
-# Install dependencies
-go mod download
+# Install with uv
+uv sync
 
 # Run tests
-go test ./...
+python -m pytest
 
-# Build
-go build -o slsa-demo .
+# Type checking
+python -m mypy basic/
 
-# Run
-./slsa-demo
+# Run agent
+python -m basic.agent
 ```
 
-## SLSA Compliance
+## API Keys
 
-This project demonstrates SLSA requirements:
-
-1. **Source Control** - Git version control
-2. **Build Process** - Reproducible Docker builds
-3. **Dependency Management** - Go modules
-4. **Distribution** - Container image distribution
-5. **Verification** - Health checks and metadata
-
-## CI/CD
-
-This project includes GitHub Actions workflows for:
-- Automated Docker image builds and pushes on main branch
-- Security scanning and vulnerability checks
-- SLSA compliance verification
+Get Qwen API key from [DashScope Console](https://dashscope.aliyun.com/).
 
 ## License
 
-MIT License
+MIT
 
-## Contributing
-
-Issues and pull requests are welcome!
-
----

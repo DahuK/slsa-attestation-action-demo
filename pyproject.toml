@@ -1,0 +1,8 @@
+[project]
+name = "basic"
+version = "0.1"
+description = "Basic agent using Qwen API"
+readme = "README.md"
+dependencies = [
+  "requests>=2.28.0",
+]

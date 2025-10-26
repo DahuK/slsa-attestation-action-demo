@@ -1,0 +1,20 @@
+{
+  "name": "qwen-basic",
+  "description": "A basic agent powered by Qwen-plus model",
+  "url": "localhost:8080",
+  "version": "0.1.0",
+  "capabilities": {
+    "streaming": true,
+    "function_calling": true
+  },
+  "defaultInputModes": ["text"],
+  "defaultOutputModes": ["text"],
+  "skills": [
+    {
+      "id": "dice-rolling",
+      "name": "Dice Rolling",
+      "description": "Roll dice of various sides and check prime numbers",
+      "tags": ["dice", "prime", "qwen-plus"]
+    }
+  ]
+}
