@@ -6,6 +6,10 @@ from typing import Dict, Any, List, Callable, AsyncGenerator
 from google.adk.agents import Agent
 from google.adk.models.base_llm import BaseLlm
 from google.adk.models.llm_response import LlmResponse
+from google.adk.flows.llm_flows.contents import types as adk_types
+
+# Debug mode
+DEBUG = os.getenv("DEBUG", "0") == "1"
 
 def roll_die(sides: int) -> int:
     """Roll a die and return the rolled result.
@@ -46,7 +50,7 @@ class QwenLLM(BaseLlm):
         super().__init__(model=model)
         # Store API config as private attributes
         object.__setattr__(self, '_api_key', os.getenv("DASHSCOPE_API_KEY", ""))
-        object.__setattr__(self, '_api_url', "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2text/generate")
+        object.__setattr__(self, '_api_url', "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
 
     @property
     def api_key(self) -> str:
@@ -56,8 +60,20 @@ class QwenLLM(BaseLlm):
     def api_url(self) -> str:
         return object.__getattribute__(self, '_api_url')
 
-    async def generate_content_async(self, request) -> AsyncGenerator[LlmResponse, None]:
+    async def generate_content_async(self, request, stream: bool = False) -> AsyncGenerator[LlmResponse, None]:
         """Generate content using Qwen API"""
+        # Check if API key is configured
+        if not self.api_key:
+            error_msg = "Error: DASHSCOPE_API_KEY environment variable is not set. Please configure your API key to use this agent."
+            if DEBUG:
+                print(f"DEBUG: {error_msg}")
+            error_part = adk_types.Part(text=error_msg)
+            error_content = adk_types.Content(parts=[error_part])
+            error_response = LlmResponse(content=error_content)
+            yield error_response
+            return
+
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
@@ -68,7 +84,12 @@ class QwenLLM(BaseLlm):
             # Get the first content's text
             content = request.contents[0]
             if hasattr(content, 'parts') and content.parts:
-                message = content.parts[0]
+                # Extract text from the first part
+                part = content.parts[0]
+                if hasattr(part, 'text') and part.text:
+                    message = part.text
+                else:
+                    message = str(part)
             else:
                 message = str(content)
         else:
@@ -76,48 +97,81 @@ class QwenLLM(BaseLlm):
 
         data = {
             "model": self.model,
-            "input": {
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": message
-                    }
-                ]
-            }
+            "messages": [
+                {
+                    "role": "user",
+                    "content": message
+                }
+            ],
+            "stream": stream
         }
 
-        try:
-            response = requests.post(self.api_url, headers=headers, json=data, timeout=30)
-            response.raise_for_status()
 
-            result = response.json()
-            if "output" in result and "text" in result["output"]:
-                text = result["output"]["text"]
-                # Create LlmResponse
-                llm_response = LlmResponse(
-                    text=text,
-                    usage={"input_tokens": 0, "output_tokens": 0}  # Simplified usage info
-                )
-                yield llm_response
+        try:
+            # Handle streaming vs non-streaming differently
+            if stream:
+                # For streaming, we need to handle the response as a stream
+                response = requests.post(self.api_url, headers=headers, json=data, timeout=30, stream=True)
+                response.raise_for_status()
+
+                current_text = ""
+                for line in response.iter_lines():
+                    if line:
+                        line = line.decode('utf-8')
+                        if line.startswith('data: '):
+                            data_str = line[6:]  # Remove 'data: ' prefix
+                            if data_str == '[DONE]':
+                                break
+                            try:
+                                chunk = json.loads(data_str)
+                                if "choices" in chunk and chunk["choices"] and "delta" in chunk["choices"][0]:
+                                    delta = chunk["choices"][0]["delta"]
+                                    if "content" in delta and delta["content"]:
+                                        current_text += delta["content"]
+                                        # Create Content with Part
+                                        part = adk_types.Part(text=current_text)
+                                        content = adk_types.Content(parts=[part])
+                                        llm_response = LlmResponse(content=content)
+                                        yield llm_response
+                            except json.JSONDecodeError:
+                                continue
+
+                # Yield final complete response
+                if current_text:
+                    part = adk_types.Part(text=current_text)
+                    content = adk_types.Content(parts=[part])
+                    llm_response = LlmResponse(content=content)
+                    yield llm_response
             else:
-                # Error response
-                error_response = LlmResponse(
-                    text="I apologize, but I couldn't process your request properly.",
-                    usage={"input_tokens": 0, "output_tokens": 0}
-                )
-                yield error_response
+                # Non-streaming request
+                response = requests.post(self.api_url, headers=headers, json=data, timeout=30)
+                response.raise_for_status()
+
+                result = response.json()
+                # Handle OpenAI-compatible format
+                if "choices" in result and result["choices"] and "message" in result["choices"][0]:
+                    text = result["choices"][0]["message"]["content"]
+                # Handle legacy format as fallback
+                elif "output" in result and "text" in result["output"]:
+                    text = result["output"]["text"]
+                else:
+                    text = "I apologize, but I couldn't process your request properly."
+
+                # Non-streaming: yield single complete response
+                part = adk_types.Part(text=text)
+                content = adk_types.Content(parts=[part])
+                llm_response = LlmResponse(content=content)
+                yield llm_response
 
         except requests.exceptions.RequestException as e:
-            error_response = LlmResponse(
-                text=f"I encountered an error while processing your request: {str(e)}",
-                usage={"input_tokens": 0, "output_tokens": 0}
-            )
+            error_part = adk_types.Part(text=f"I encountered an error while processing your request: {str(e)}")
+            error_content = adk_types.Content(parts=[error_part])
+            error_response = LlmResponse(content=error_content)
             yield error_response
         except Exception as e:
-            error_response = LlmResponse(
-                text=f"An unexpected error occurred: {str(e)}",
-                usage={"input_tokens": 0, "output_tokens": 0}
-            )
+            error_part = adk_types.Part(text=f"An unexpected error occurred: {str(e)}")
+            error_content = adk_types.Content(parts=[error_part])
+            error_response = LlmResponse(content=error_content)
             yield error_response
 
 

@@ -23,11 +23,26 @@ cd slsa-demo
 # Install dependencies
 uv sync
 
+# Setup environment (optional)
+python setup_env.py
+
 # Set API key
 export DASHSCOPE_API_KEY="your-api-key"
 ```
 
 ### Usage
+
+#### Option 1: Use the Test Script (Recommended)
+
+```bash
+# Set your API key
+export DASHSCOPE_API_KEY="your-api-key-here"
+
+# Run the agent tests
+python run_agent.py
+```
+
+#### Option 2: Use in Python Code
 
 ```python
 from basic.agent import root_agent
@@ -39,6 +54,21 @@ print(response)
 # Check prime numbers
 response = root_agent.chat("Check if 17, 23, 25 are prime")
 print(response)
+```
+
+#### Option 3: Direct LLM Usage
+
+```python
+from basic.agent import QwenLLM
+import asyncio
+
+async def test_llm():
+    llm = QwenLLM()
+    # Use the LLM directly with streaming or non-streaming
+    async for response in llm.generate_content_async(request, stream=False):
+        print(response.content.parts[0].text)
+
+asyncio.run(test_llm())
 ```
 
 ### Docker
@@ -95,6 +125,47 @@ python -m basic.agent
 ## API Keys
 
 Get Qwen API key from [DashScope Console](https://dashscope.aliyun.com/).
+
+## Troubleshooting
+
+### Common Issues
+
+1. **400 Bad Request Error**
+   - Ensure `DASHSCOPE_API_KEY` is correctly set
+   - Check that the API key has proper permissions
+   - Verify network connectivity to DashScope API
+
+2. **401 Unauthorized Error**
+   - Confirm API key is valid and not expired
+   - Check API key format (should not include extra spaces)
+
+3. **Stream Parameter Error**
+   - The agent supports both streaming (`stream=True`) and non-streaming (`stream=False`) modes
+   - Streaming is enabled by default in the agent configuration
+   - If you encounter stream-related errors, check the Google ADK version compatibility
+
+### Debug Mode
+
+Enable debug logging to troubleshoot issues:
+
+```bash
+export DEBUG=1
+python -c "from basic.agent import root_agent; print('Agent loaded successfully')"
+```
+
+### Environment Setup
+
+Use the provided setup script to configure your environment:
+
+```bash
+# Setup environment variables and create .env file
+python setup_env.py
+
+# This will:
+# - Check if DASHSCOPE_API_KEY is set
+# - Create a .env file template if it doesn't exist
+# - Provide usage instructions
+```
 
 ## License
 
