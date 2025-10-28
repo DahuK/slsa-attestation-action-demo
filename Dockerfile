@@ -9,8 +9,8 @@ COPY  basic/ basic/
 COPY  pyproject.toml pyproject.toml
 COPY  README.md README.md
 COPY  .python-version .python-version
-#COPY  uv.lock uv.lock
+COPY  uv.lock uv.lock
 
-RUN uv sync --reinstall
+RUN uv sync --locked --refresh
 
 CMD ["basic"]
