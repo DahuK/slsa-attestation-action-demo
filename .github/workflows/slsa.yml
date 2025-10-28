@@ -14,3 +14,5 @@ jobs:
       contents: write # needed for storing the vsa in the repo.
       id-token: write
     uses: slsa-framework/source-actions/.github/workflows/compute_slsa_source.yml@main
+    with:
+      allow-merge-commits: true
