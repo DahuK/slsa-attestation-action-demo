@@ -1,6 +1,6 @@
 # SLSA Attestation Action Demo
 
-🚀 A SLSA-compliant AI agent powered by Qwen-Plus with function calling capabilities.
+🚀 A SLSA-compliant AI agent powered by Qwen-Plus.
 
 ## Features
 
