@@ -2,7 +2,7 @@
   "name": "basic",
   "description": "A basic agent powered by Qwen-plus model",
   "url": "localhost:8080",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "capabilities": {
     "streaming": true,
     "function_calling": true
