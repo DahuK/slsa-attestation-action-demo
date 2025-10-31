@@ -81,7 +81,7 @@ For a GitHub project, you can use [source-actions](https://github.com/slsa-frame
 
 You can refer to this sample [slsa.yml](https://github.com/DahuK/slsa-attestation-action-demo/blob/main/.github/workflows/slsa.yml).
 
-After configuring the pipeline, when a commit is merged into the main branch, source-tool will automatically validate the SLSA level and, using consign with the DSSE envelope in a keyless flow, sign the VSA/provenance.
+After configuring the pipeline, when a commit is merged into the main branch, source-tool will automatically validate the SLSA level and sign the VSA/provenance using DSSE envelop with Cosign.
 
 To meet SLSA Source Level 3 requirements, project administrators must ensure technical controls for branches and all tags. [DESIGN.md](https://github.com/slsa-framework/source-tool/blob/main/docs/DESIGN.md) outlines several controls such as `CONTINUITY_ENFORCED`, `REVIEW_ENFORCED`, `TAG_HYGIENE`, and custom `GH_REQUIRED_CHECK_*` controls that map to organization-defined checks. You can refer to the demo project's [rulesets](https://github.com/DahuK/slsa-attestation-action-demo/settings/rules) as an example.
 
